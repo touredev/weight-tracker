@@ -54,6 +54,7 @@ var weightTrackerController = (function () {
 
       //create new item based on type
       newItem = new Weight(ID, val, time);
+      newItem.setType(data.allItems[dataSize - 1])
 
       //push into our data scructure
       data.allItems.push(newItem);
@@ -109,6 +110,23 @@ var weightTrackerController = (function () {
         currentWeight: getCurrentWeight()
       };
     },
+    // --- Local Storage stuff ---
+    storeData: function () {
+      localStorage.setItem('weight-tracking', JSON.stringify(data));
+    },
+
+    deleteData: function () {
+      localStorage.removeItem('weight-tracking');
+    },
+
+    getStoredData: function () {
+      return JSON.parse(localStorage.getItem('weight-tracking'));
+    },
+
+    updateData: function (StoredData) {
+      data.allItems = StoredData.allItems;
+      data.lastTracking = StoredData.lastTracking;
+    },
     testing: function () {
       console.log(data);
     }
@@ -133,17 +151,63 @@ var UIController = (function () {
     if (type === '' || variance === 0) return '';
 
     var verb = type === 'increase' ? 'gained' : 'lost';
-    var text = `You ${verb} weight since last tracking: <br>
-    <p>It has ${type}d by ${Math.abs(variance)} Kg.</p>
+    var text = `<p>You ${verb} weight since last tracking.</p>
+    <p>It has ${type}d by <strong>${Math.abs(variance)}</strong> kg.</p>
     `;
 
     return text;
   };
 
+  var displayIcon = function (type) {
+    if (type === '') return '';
+    var iconName = type === 'increase' ? 'fa-arrow-up' : 'fa-arrow-down';
+
+    return `<i class="fa ${iconName} item__value--icon ${type}__icon"></i>`;
+  };
+
+  var displayDate = function (dateValue) {
+    if (!dateValue) return;
+    var time, year, month, months, day, days;
+    time = dateValue;
+    if (typeof time === 'string') {
+      time = new Date(time);
+    }
+
+    months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+
+    days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday'
+    ];
+
+    day = time.getDay();
+    month = time.getMonth();
+    year = time.getFullYear();
+    return `${days[day]} ${months[month]} ${time.getDate()}, ${year}`;
+  };
+
   var buildWeightTag = function (weight) {
     if (!weight) return '';
 
-    return `<p>Your actual weight is <span class="current__weight">${weight} kg</span>.</p>`;
+    return `<p>Your actual weight is <span class="current__weight">${weight}</span> kg.</p>`;
   }
 
   return {
@@ -164,17 +228,18 @@ var UIController = (function () {
         date
       } = item;
       newHtml =
-        `<div class="tracker__item" id="tracking-${id}">
-        <div class="tracker__item__value">
-          <div class="tracker__item__value-number">${value}</div>
-        </div>
-        <div class="tracker__item__date">
-          <div class="tracker__item__date-label">${date}</div>
-        </div>
-        <button class="remove__item-btn">
-          <i class="icon fa fa-times"></i>
-        </button>
-      </div>`;
+        `<div class="tracker__item animated fadeIn" id="tracking-${id}">
+          <div class="tracker__item__date">
+            <div class="tracker__item__date-label">${displayDate(date)}</div>
+          </div>
+          <div class="tracker__item__value">
+            ${displayIcon(item.getType())}
+            <div class="tracker__item__value-number">${value}</div>
+          </div>
+          <button class="remove__item-btn">
+              <i class="icon fa fa-times"></i>
+          </button>
+        </div>`;
 
       //Insert the HTML into the DOM
       document.querySelector(element).insertAdjacentHTML('afterbegin', newHtml);
@@ -223,6 +288,28 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
     document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
   }
 
+  var loadData = function () {
+    var storedData, newItem;
+
+    // 1. load the data from the local storage
+    storedData = weightTrackerCtrl.getStoredData();
+
+    if (storedData) {
+      // 2. insert the data into the data structure
+      weightTrackerCtrl.updateData(storedData);
+
+      // 3. Create the Weight Object
+      storedData.allItems.forEach(function (cur) {
+        newItem = weightTrackerCtrl.addItem(cur.value, cur.date);
+        UICtrl.addListItem(newItem);
+      });
+
+      // 5. Display tracking info
+      var trackingInfo = weightTrackerCtrl.getTrackingInfo();
+      UICtrl.displayTrackingInfo(trackingInfo);
+    }
+  };
+
   //update the last tracking
   var updateTracking = function () {
     // 5. Actualize last tracking
@@ -254,6 +341,9 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
       // 5. Actualize tracking info
       updateTracking();
 
+      // 6. save to local storage
+      weightTrackerCtrl.storeData();
+
     }
 
   };
@@ -278,6 +368,9 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
       // 3. Update and show new tracking info
       updateTracking();
 
+      // 4. save to local storage
+      weightTrackerCtrl.storeData();
+
     }
   };
 
@@ -293,6 +386,7 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
         currentWeight: null
       })
       setupEventListeners();
+      loadData();
     }
   };
 
