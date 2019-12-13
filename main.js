@@ -32,6 +32,14 @@ var weightTrackerController = (function () {
 
   };
 
+  var getCurrentWeight = function () {
+    var {
+      allItems
+    } = data;
+    if (!allItems.length) return null;
+    return allItems[allItems.length - 1].value;
+  };
+
   return {
     //making a public method to add item to our data structure
     addItem: function (val, time) {
@@ -68,19 +76,26 @@ var weightTrackerController = (function () {
     },
 
     actualizeTracking: function () {
-      if (data.allItems.length < 2) return;
+      if (data.allItems.length < 2) {
+        data.lastTracking = {
+          type: '',
+          variance: 0
+        }
+      } else {
+        var type, variance, lastItems;
 
-      var type, variance, lastItems;
+        lastItems = data.allItems.slice(-2);
+        lastItems[1].setType(lastItems[0]);
+        type = lastItems[1].getType();
+        variance = lastItems[1].value - lastItems[0].value;
 
-      lastItems = data.allItems.slice(-2);
-      lastItems[1].setType(lastItems[0]);
-      type = lastItems[1].getType();
-      variance = lastItems[1].value - lastItems[0].value;
+        data.lastTracking = {
+          type,
+          variance
+        };
+      }
 
-      data.lastTracking = {
-        type,
-        variance
-      };
+
     },
     setItemsTypes: function () {
       data.allItems.forEach(function (cur, index) {
@@ -91,7 +106,7 @@ var weightTrackerController = (function () {
       return {
         lastTracking: data.lastTracking,
         total: data.allItems.length,
-        currentWeight: data.allItems[data.allItems.length - 1].value
+        currentWeight: getCurrentWeight()
       };
     },
     testing: function () {
@@ -106,7 +121,7 @@ var UIController = (function () {
     inputValue: '.add__value',
     inputBtn: '.add__btn',
     container: '.tracker',
-    weightLabel: '.current__weight',
+    weightLabel: '.summary__weight',
     trackingLabel: '.summary__tracking'
   };
 
@@ -124,6 +139,12 @@ var UIController = (function () {
 
     return text;
   };
+
+  var buildWeightTag = function (weight) {
+    if (!weight) return '';
+
+    return `<p>Your actual weight is <span class="current__weight">${weight} kg</span>.</p>`;
+  }
 
   return {
     getInput: function () {
@@ -176,7 +197,7 @@ var UIController = (function () {
         currentWeight,
         lastTracking
       } = obj;
-      document.querySelector(DOMStrings.weightLabel).textContent = `${currentWeight} Kg`
+      document.querySelector(DOMStrings.weightLabel).innerHTML = buildWeightTag(currentWeight);
       document.querySelector(DOMStrings.trackingLabel).innerHTML = buildTrackingTag(lastTracking);
     },
     //public method to get DOM fields
@@ -198,6 +219,8 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
         event.preventDefault();
       }
     });
+
+    document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
   }
 
   //update the last tracking
@@ -235,9 +258,40 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
 
   };
 
+  //delete item
+  var ctrlDeleteItem = function (event) {
+
+    var itemID, splitID, ID;
+    console.log(event);
+    itemID = event.target.parentNode.parentNode.id;
+    console.log(itemID);
+    if (itemID) {
+      splitID = itemID.split('-');
+      ID = parseInt(splitID[1]);
+
+      // 1. Delete the item from data structure
+      weightTrackerCtrl.deleteItem(ID);
+
+      // 2. Delete the item from UI
+      UICtrl.deleteListItem(itemID);
+
+      // 3. Update and show new tracking info
+      updateTracking();
+
+    }
+  };
+
   return {
     init: function () {
       console.log('Application has started.');
+      UICtrl.displayTrackingInfo({
+        lastTracking: {
+          type: '',
+          variance: 0
+        },
+        total: 0,
+        currentWeight: null
+      })
       setupEventListeners();
     }
   };
