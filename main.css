@@ -17,18 +17,6 @@ html {
   font-size: 62.5%;
 }
 
-@media only screen and (max-width: 68.75em) {
-  html {
-    font-size: 55%;
-  }
-}
-
-@media only screen and (max-width: 37.5em) {
-  html {
-    font-size: 50%;
-  }
-}
-
 body {
   font-family: 'Montserrat', sans-serif;
   font-weight: 400;
@@ -65,7 +53,7 @@ header {
   flex-direction: column;
   padding: 2rem;
   line-height: 1;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   text-align: center
 }
 
@@ -97,12 +85,12 @@ header {
 
 .summary {
   line-height: 1;
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 3.5rem;
+  padding: 2rem 3rem;
   font-weight: 400;
   text-align: center;
   letter-spacing: 3px;
@@ -258,4 +246,77 @@ button {
   top: 2rem;
   right: 2rem;
   color: #ff5959
+}
+
+@media only screen and (max-width: 68.75em) {
+  html {
+    font-size: 55%;
+  }
+
+  header {
+    padding: 1.2rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .tracker {
+    width: 72%;
+  }
+}
+
+@media only screen and (max-width: 37.5em) {
+  html {
+    font-size: 50%;
+  }
+
+  header {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .main-wrapper {
+    margin-top: 0.5rem;
+    padding: 1rem;
+  }
+
+  .summary {
+    margin-bottom: 1rem;
+    padding: 1.5rem 2rem;
+    font-weight: 400;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .input {
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    max-width: 65%;
+  }
+
+  .tracker {
+    width: 76%;
+  }
+
+  .tracker__item {
+    padding: 1rem 1.8rem;
+  }
+
+  .tracker__item__date {
+    font-size: 1.3rem;
+    font-weight: 400;
+  }
+
+  .item__value--icon {
+    font-size: 3rem;
+  }
+
+  .tracker__item__value-number {
+    font-size: 3.5rem;
+  }
+
+  .remove__item-btn {
+    font-size: 2rem;
+    top: 1rem;
+    right: 1rem;
+  }
 }
