@@ -175,7 +175,7 @@ button {
 }
 
 .tracker>* {
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .tracker>*:not(:last-child) {

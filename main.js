@@ -9,8 +9,6 @@ var weightTrackerController = (function () {
   };
 
   Weight.prototype.setType = function (previousTracking) {
-    if (this.type !== '') return;
-
     if (previousTracking) {
       this.type = this.value > previousTracking.value ? 'increase' : 'decrease';
     } else {
@@ -63,17 +61,36 @@ var weightTrackerController = (function () {
       return newItem;
     },
 
-    deleteItem: function (id) {
-      var ids, index;
-      ids = data.allItems.map(function (current) {
-        return current.id;
+    updateItem: function (id, value) {
+      var currentItem, index;
+      //retrieve item index
+      index = data.allItems.findIndex(function (current) {
+        return current.id === id;
       });
-
-      index = ids.indexOf(id);
+      // Update item value
+      console.log('DATA:', data.allItems);
+      currentItem = data.allItems[index];
+      console.log('ITEM:', currentItem);
+      currentItem.value = value;
+      data.allItems[index] = currentItem;
+      return currentItem;
+    },
+    deleteItem: function (id) {
+      var index = data.allItems.findIndex(function (current) {
+        return current.id === id;
+      });
 
       if (index !== -1) {
         data.allItems.splice(index, 1);
       }
+    },
+
+    getItem: function (id) {
+      var currentItem = data.allItems.find(function (current) {
+        return current.id === id;
+      });
+
+      return currentItem;
     },
 
     actualizeTracking: function () {
@@ -99,6 +116,7 @@ var weightTrackerController = (function () {
 
     },
     setItemsTypes: function () {
+      console.log(data.allItems);
       data.allItems.forEach(function (cur, index) {
         cur.setType(data.allItems[index - 1]);
       });
@@ -140,7 +158,8 @@ var UIController = (function () {
     inputBtn: '.add__btn',
     container: '.tracker',
     weightLabel: '.summary__weight',
-    trackingLabel: '.summary__tracking'
+    trackingLabel: '.summary__tracking',
+    weightValue: '.tracker__item__value-number'
   };
 
   var buildTrackingTag = function (tracking) {
@@ -212,9 +231,10 @@ var UIController = (function () {
 
   return {
     getInput: function () {
+      var formInput = document.querySelector(DOMStrings.inputValue);
       return {
-        value: parseFloat(document.querySelector(DOMStrings.inputValue).value),
-        date: new Date()
+        inputId: formInput.id,
+        value: parseFloat(formInput.value)
       };
     },
     //Add list of weight to the UI
@@ -245,16 +265,51 @@ var UIController = (function () {
       document.querySelector(element).insertAdjacentHTML('afterbegin', newHtml);
     },
 
+    updateListItem: function (item) {
+      var newHtml, selectorId;
+      var {
+        id,
+        value,
+        date
+      } = item;
+      selectorId = '#tracking-' + id;
+      newHtml =
+        `<div class="tracker__item__date">
+          <div class="tracker__item__date-label">${displayDate(date)}</div>
+        </div>
+        <div class="tracker__item__value">
+          ${displayIcon(item.getType())}
+          <div class="tracker__item__value-number">${value}</div>
+        </div>
+        <button class="remove__item-btn">
+            <i class="icon fa fa-times"></i>
+        </button>`;
+      document.querySelector(selectorId).innerHTML = newHtml;
+    },
+
     //delete list from DOM
     deleteListItem: function (selectorID) {
       var el = document.getElementById(selectorID);
       el.parentNode.removeChild(el);
     },
 
+    // add item value to input
+    addItemToInput: function ({
+      id,
+      value
+    }) {
+
+      var field = document.querySelector(DOMStrings.inputValue);
+      field.value = value;
+      field.id = 'item-' + id;
+      field.focus();
+    },
+
     //clear input field after adding item
     clearField: function () {
       var field = document.querySelector(DOMStrings.inputValue);
       field.value = '';
+      field.id = 'value';
       field.focus();
     },
     displayTrackingInfo: function (obj) {
@@ -276,16 +331,31 @@ var UIController = (function () {
 var controller = (function (weightTrackerCtrl, UICtrl) {
   var setupEventListeners = function () {
     var DOM = UICtrl.getDOMStrings();
-
-    document.querySelector(DOM.inputBtn).addEventListener('click', ctrlAddItem);
+    document.querySelector(DOM.inputBtn).addEventListener('click', function (event) {
+      if (UICtrl.getInput().inputId === 'value') {
+        ctrlAddItem();
+      } else {
+        //ctrlUpdateItem();
+      }
+    });
     document.addEventListener('keypress', function (event) {
       if (event.keyCode === 13 || event.which === 13) {
-        ctrlAddItem();
+        if (UICtrl.getInput().inputId === 'value') {
+          ctrlAddItem();
+        } else {
+          ctrlUpdateItem();
+        }
         event.preventDefault();
       }
     });
 
     document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
+    //document.querySelector(DOM.container).addEventListener('click', ctrlSelectItem);
+  }
+
+  var parseElId = function (elementId) {
+    var splitID = elementId.split('-');
+    return parseInt(splitID[1]);
   }
 
   var loadData = function () {
@@ -330,7 +400,7 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
     //check if there is data on fields
     if (!isNaN(input.value) && input.value > 0) {
       // 2. Add the item to weight tracker controller
-      newItem = weightTrackerCtrl.addItem(input.value, input.date);
+      newItem = weightTrackerCtrl.addItem(input.value, new Date());
 
       // 3. Add the item to the UI
       UICtrl.addListItem(newItem);
@@ -348,20 +418,28 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
 
   };
 
-  //delete item
-  var ctrlDeleteItem = function (event) {
-
-    var itemID, splitID, ID;
-    console.log(event);
+  var ctrlSelectItem = function (event) {
+    if (event.target.className !== 'tracker__item__value-number') return;
+    var itemID, item;
     itemID = event.target.parentNode.parentNode.id;
     console.log(itemID);
+
     if (itemID) {
-      splitID = itemID.split('-');
-      ID = parseInt(splitID[1]);
+      item = weightTrackerCtrl.getItem(parseElId(itemID));
+      item && UICtrl.addItemToInput(item);
+    }
+  }
+
+  //delete item
+  var ctrlDeleteItem = function (event) {
+    if (event.target.className !== 'icon fa fa-times') return;
+    var itemID = event.target.parentNode.parentNode.id;
+    console.log(itemID);
+    if (itemID) {
 
       // 1. Delete the item from data structure
-      weightTrackerCtrl.deleteItem(ID);
-
+      weightTrackerCtrl.deleteItem(parseElId(itemID));
+      weightTrackerCtrl.setItemsTypes();
       // 2. Delete the item from UI
       UICtrl.deleteListItem(itemID);
 
@@ -373,6 +451,32 @@ var controller = (function (weightTrackerCtrl, UICtrl) {
 
     }
   };
+
+  //Update item
+  var ctrlUpdateItem = function () {
+    var input, ID, item;
+    // 1. Get the fieLd input 
+    input = UICtrl.getInput();
+    //check if there is data on fields
+    if (!isNaN(input.value) && input.value > 0) {
+      // 2. Update item value in data structure
+      ID = parseElId(input.inputId);
+      item = weightTrackerCtrl.updateItem(ID, input.value);
+      //weightTrackerCtrl.setItemsTypes();
+      // 3. Update the item value in the UI
+      UICtrl.updateListItem(item);
+
+      // 4. Clear the weight field
+      UICtrl.clearField();
+
+      // 5. Actualize tracking info
+      updateTracking();
+
+      // 6. save to local storage
+      weightTrackerCtrl.storeData();
+      //loadData();
+    };
+  }
 
   return {
     init: function () {
